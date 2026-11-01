@@ -1,0 +1,33 @@
+name: Upstream review and JavaScript checks
+
+on:
+  schedule:
+    - cron: '17 3 * * 1'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'upstreams.json'
+      - 'tools/check_upstreams.py'
+      - 'scripts/**'
+      - '.github/workflows/check-upstreams.yml'
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            node --check "$file"
+          done < <(find scripts -type f -name '*.js' -print0)
+      - name: Check upstream revisions (notify only; never auto-merge)
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 tools/check_upstreams.py
